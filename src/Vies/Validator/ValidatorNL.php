@@ -98,10 +98,10 @@ class ValidatorNL extends ValidatorAbstract
 
         $checksum = (int)$vatNumber[8];
         $weights = [9, 8, 7, 6, 5, 4, 3, 2];
-        $checkval = $this->sumWeights($weights, $vatNumber);
-        $checkval = ($checkval % 11) > 9 ? 0 : ($checkval % 11);
+        $checkVal = $this->sumWeights($weights, $vatNumber);
+        $checkVal = ($checkVal % 11) > 9 ? 0 : ($checkVal % 11);
 
-        return $checkval == $checksum;
+        return $checkVal == $checksum;
     }
 
     /**
@@ -122,7 +122,7 @@ class ValidatorNL extends ValidatorAbstract
             return false;
         }
 
-        $sumBase = (int)array_reduce(str_split($vatNumber), function ($acc, $e) {
+        $sumBase = array_reduce(str_split($vatNumber), function ($acc, $e) {
             if (ctype_digit($e)) {
                 return $acc.$e;
             }
@@ -130,6 +130,10 @@ class ValidatorNL extends ValidatorAbstract
             return $acc.$this->checkCharacter[$e];
         }, '2321');
 
-        return ($sumBase % 97) === 1;
+        if (PHP_INT_SIZE === 4 && function_exists('bcmod')) {
+            return bcmod($sumBase, '97') === '1';
+        } else {
+            return ((int) $sumBase % 97) === 1;
+        }
     }
 }

@@ -12,7 +12,21 @@ declare (strict_types=1);
 namespace DragonBe\Vies\Validator;
 
 /**
- * Class ValidatorGB
+ * This validator was derived from the "ValidatorGB" validator to validate the "XI" VAT numbers of
+ * "United Kingdom (Northern Ireland)" following the end of the Brexit transition period on December, 31 2020.
+ *
+ * It is based on the information at:
+ * https://www.avalara.com/vatlive/en/vat-news/brexit-northern-ireland-vat-and-eoro--xi--number.html
+ *
+ * As more information is published, this validator may be made more precise:
+ *
+ * - Remove the logic to validate Isle of Man numbers?
+ * - Remove the logic to validate 'GD' and 'HA' prefixes?
+ *
+ */
+
+/**
+ * Class ValidatorXI
  * @package DragonBe\Vies\Validator
  *
  * VAT format: [C1 C2 C3 C4 C5]
@@ -45,7 +59,7 @@ namespace DragonBe\Vies\Validator;
  *          Either R1 or R2 must equal to zero.
  *
  */
-class ValidatorGB extends ValidatorAbstract
+class ValidatorXI extends ValidatorAbstract
 {
     /**
      * {@inheritdoc}

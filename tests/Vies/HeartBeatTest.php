@@ -5,6 +5,7 @@ namespace DragonBe\Test\Vies;
 
 use DomainException;
 use DragonBe\Vies\HeartBeat;
+use DragonBe\Vies\Vies;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -31,7 +32,7 @@ class HeartBeatTest extends TestCase
     {
         $hb = new HeartBeat();
         $port = $hb->getPort();
-        $this->assertSame(80, $port);
+        $this->assertSame(443, $port);
     }
 
     /**
@@ -48,6 +49,7 @@ class HeartBeatTest extends TestCase
 
     /**
      * @covers ::setPort
+     * @covers ::getPort
      */
     public function testCanSetPort()
     {
@@ -55,6 +57,18 @@ class HeartBeatTest extends TestCase
         $hb = new HeartBeat();
         $hb->setPort($port);
         $this->assertSame($port, $hb->getPort());
+    }
+
+    /**
+     * @covers ::setTimeout
+     * @covers ::getTimeout
+     */
+    public function testCanSetTimeout()
+    {
+        $timeout = 300;
+        $hb = new HeartBeat();
+        $hb->setTimeout($timeout);
+        $this->assertSame($timeout, $hb->getTimeout());
     }
 
     /**
@@ -93,5 +107,28 @@ class HeartBeatTest extends TestCase
         HeartBeat::$testingServiceIsUp = false;
         $hb = new HeartBeat($host, $port);
         $this->assertFalse($hb->isAlive());
+    }
+
+    public function socketProvider(): array
+    {
+        return [
+            'Non-existing socket on localhost' => ['127.0.0.1', -1, 10, false],
+            'Socket 443 on ec.europe.eu' => [Vies::VIES_DOMAIN, Vies::VIES_PORT, 10, true],
+        ];
+    }
+
+    /**
+     * @dataProvider socketProvider
+     * @covers ::isAlive
+     * @covers ::reachOut
+     * @covers ::getSecuredResponse
+     * @covers ::readContents
+     */
+    public function testIsAliveUsingSockets($host, $port, $timeout, $expectedResult)
+    {
+        HeartBeat::$testingEnabled = false;
+        $heartBeat = new HeartBeat($host, $port, $timeout);
+        $actualResult = $heartBeat->isAlive();
+        $this->assertSame($expectedResult, $actualResult);
     }
 }

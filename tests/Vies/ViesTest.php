@@ -318,7 +318,7 @@ class ViesTest extends TestCase
     {
         $vies = new Vies();
         $options = $vies->getOptions();
-        $this->assertInternalType('array', $options);
+        $this->assertIsArray($options);
         $this->assertEmpty($options);
     }
 
@@ -329,8 +329,8 @@ class ViesTest extends TestCase
     {
         $hb = (new Vies())->getHeartBeat();
         $this->assertInstanceOf(HeartBeat::class, $hb);
-        $this->assertSame('tcp://' . Vies::VIES_DOMAIN, $hb->getHost());
-        $this->assertSame(80, $hb->getPort());
+        $this->assertSame(Vies::VIES_DOMAIN, $hb->getHost());
+        $this->assertSame(Vies::VIES_PORT, $hb->getPort());
     }
 
     /**
@@ -443,14 +443,6 @@ class ViesTest extends TestCase
                 "Main Street 1\x3c\x73\x63\x72\x69\x70\x74\x3e\x61\x6c\x65\x72\x74\x28\x22"
                 . "\x78\x73\x73\x22\x29\x3b\x3c\x2f\x73\x63\x72\x69\x70\x74\x3e",
                 '1000',
-                'Some Town',
-            ],
-            [
-                'HackThePlanet',
-                'Ltd',
-                'Main Street 1',
-                '1000<?php echo url_decode("%3c%73%63%72%69%70%74%3e%61%6c%65%72%74%28%22%78'
-                . '%73%73%22%29%3b%3c%2f%73%63%72%69%70%74%3e") ?>',
                 'Some Town',
             ],
             [
@@ -643,5 +635,137 @@ class ViesTest extends TestCase
         $vies->setSoapClient($soapClient);
 
         $this->assertInstanceOf(SoapClient::class, $vies->getSoapClient());
+    }
+
+    public function vatTestNumberProvider(): array
+    {
+        return [
+            'Belgian VAT ID that tests valid' => ['BE', '100', true],
+            'Irish VAT ID that tests invalid' => ['IE', '200', false],
+            'German VAT ID that tests valid'  => ['DE', '100', true],
+        ];
+    }
+
+    /**
+     * Testing the test VAT SOAP service
+     *
+     * @param string $countryCode
+     * @param string $vatNumber
+     * @param bool $expectation
+     * @throws ViesException
+     * @throws ViesServiceException
+     *
+     * @covers ::validateTestVat
+     * @covers ::validateVat
+     * @covers ::setWsdl
+     *
+     * @dataProvider vatTestNumberProvider
+     */
+    public function testViesTestService(string $countryCode, string $vatNumber, bool $expectation)
+    {
+        $result = (new Vies())->validateVat($countryCode, $vatNumber);
+        $this->assertSame($expectation, $result->isValid());
+    }
+
+    /**
+     * Testing if we can catch soap exceptions when trying
+     * to make VIES test calls
+     *
+     * @throws ViesException
+     * @throws ViesServiceException
+     * @throws \ReflectionException
+     *
+     * @covers ::validateVat
+     * @covers ::validateTestVat
+     */
+    public function testExceptionIsRaisedWhenSoapCallFailsForTestService()
+    {
+        $this->expectException(ViesServiceException::class);
+        $stub = $this->getMockFromWsdl(dirname(__FILE__) . '/_files/checkVatTestService.wsdl');
+        $stub->expects($this->any())
+            ->method('__soapCall')
+            ->will($this->throwException(new SoapFault("test", "myMessage")));
+
+        (new Vies())
+            ->setSoapClient($stub)
+            ->validateVat('BE', '100')
+        ;
+        $this->fail('Expected exception was not raised');
+    }
+
+    /**
+     * Testing to see if we can split a combined
+     * VAT ID into country code and VAT number.
+     *
+     * @covers ::splitVatId
+     */
+    public function testSplitVatId()
+    {
+        $vatId = 'BE1234567890';
+        $countryCode = 'BE';
+        $vatNumber = '1234567890';
+        $resultSet = (new Vies())->splitVatId($vatId);
+        $this->assertSame($countryCode, $resultSet['country']);
+        $this->assertSame($vatNumber, $resultSet['id']);
+    }
+
+    /**
+     * Testing to see if we allow test codes to be used
+     * for testing VIES services
+     *
+     * @covers ::allowTestCodes
+     * @covers ::areTestCodesAllowed
+     */
+    public function testAllowingTestCodes()
+    {
+        $vies = (new Vies())->allowTestCodes();
+        $this->assertTrue($vies->areTestCodesAllowed());
+    }
+
+    /**
+     * Testing to see if we disallow test codes to be used
+     * for testing VIES services
+     *
+     * @covers ::disallowTestCodes
+     * @covers ::areTestCodesAllowed
+     */
+    public function testDisallowingTestCodes()
+    {
+        $vies = (new Vies())->disallowTestCodes();
+        $this->assertFalse($vies->areTestCodesAllowed());
+    }
+
+    public function excludedCountryProvider()
+    {
+        return [
+            'United Kingdom (Brexit 2021-01-01)' => ['GB', '244795376', 'United Kingdom', '2021-01-01', 'Brexit'],
+        ];
+    }
+
+    /**
+     * @param string $countryCode
+     * @param string $vatId
+     * @param string $country
+     * @param string $excluded
+     * @param string $reason
+     *
+     * @throws ViesException
+     * @throws ViesServiceException
+     *
+     * @covers ::validateVat
+     * @dataProvider excludedCountryProvider
+     */
+    public function testExcludedCountryVatValidation($countryCode, $vatId, $country, $excluded, $reason)
+    {
+        $exceptionMessage = sprintf(
+            'Country %s is no longer supported by VIES services provided by EC since %s because of %s',
+            $country,
+            $excluded,
+            $reason,
+        );
+        $this->expectException(ViesServiceException::class);
+        $this->expectExceptionMessage($exceptionMessage);
+        (new Vies())->validateVat($countryCode, $vatId);
+        $this->fail('Expected exception was not thrown');
     }
 }

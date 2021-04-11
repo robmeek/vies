@@ -251,7 +251,7 @@ class CheckVatResponse
         return $this;
     }
     /**
-     * get requerst Identifier
+     * get request Identifier
      *
      * @return string
      */
@@ -272,9 +272,10 @@ class CheckVatResponse
      * @param string $nameMatch
      * @return CheckVatResponse
      */
-    public function setNameMatch(string $nameMatch): CheckVatResponse
+    public function setNameMatch(string $nameMatch): self
     {
         $this->nameMatch = $nameMatch;
+
         return $this;
     }
 
@@ -290,9 +291,10 @@ class CheckVatResponse
      * @param string $companyTypeMatch
      * @return CheckVatResponse
      */
-    public function setCompanyTypeMatch(string $companyTypeMatch): CheckVatResponse
+    public function setCompanyTypeMatch(string $companyTypeMatch): self
     {
         $this->companyTypeMatch = $companyTypeMatch;
+
         return $this;
     }
 
@@ -308,9 +310,10 @@ class CheckVatResponse
      * @param string $streetMatch
      * @return CheckVatResponse
      */
-    public function setStreetMatch(string $streetMatch): CheckVatResponse
+    public function setStreetMatch(string $streetMatch): self
     {
         $this->streetMatch = $streetMatch;
+
         return $this;
     }
 
@@ -326,9 +329,10 @@ class CheckVatResponse
      * @param string $postcodeMatch
      * @return CheckVatResponse
      */
-    public function setPostcodeMatch(string $postcodeMatch): CheckVatResponse
+    public function setPostcodeMatch(string $postcodeMatch): self
     {
         $this->postcodeMatch = $postcodeMatch;
+
         return $this;
     }
 
@@ -344,9 +348,10 @@ class CheckVatResponse
      * @param string $cityMatch
      * @return CheckVatResponse
      */
-    public function setCityMatch(string $cityMatch): CheckVatResponse
+    public function setCityMatch(string $cityMatch): self
     {
         $this->cityMatch = $cityMatch;
+
         return $this;
     }
 
@@ -368,23 +373,23 @@ class CheckVatResponse
             }
         }
 
-        $requestDate = $row->requestDate;
+        $requestDateTime = $row->requestDate;
         if (! $row->requestDate instanceof DateTime) {
             // prepare request date
-            $requestDate = date_create_from_format(
+            $requestDateTime = date_create_from_format(
                 self::VIES_DATETIME_FORMAT,
                 $row->requestDate
             );
             // Need to set time to zero
             // otherwise datetime would use current system time (which is not the response time)
-            $requestDate->setTime(0, 0, 0, 0);
+            $requestDateTime->setTime(0, 0, 0, 0);
         }
 
         $this
             // required parameters
             ->setCountryCode($row->countryCode)
              ->setVatNumber($row->vatNumber)
-             ->setRequestDate($requestDate)
+             ->setRequestDate($requestDateTime)
              ->setValid($row->valid)
             // optional parameters
             ->setName($row->traderName ?? '---')

@@ -45,7 +45,8 @@ class ValidatorBG extends ValidatorAbstract
         }
 
         if (10 === $vatNumberLength) {
-            return $this->validateNaturalPerson($vatNumber);
+            return $this->validateNaturalPerson($vatNumber)
+                || $this->validateForeignNaturalPerson($vatNumber);
         }
         return $this->validateBusiness($vatNumber);
     }
@@ -59,18 +60,7 @@ class ValidatorBG extends ValidatorAbstract
     private function validateBusiness(string $vatNumber): bool
     {
         $weights = [1, 2, 3, 4, 5, 6, 7, 8];
-        $checkval = $this->sumWeights($weights, $vatNumber);
-
-        if ($checkval % 11 == 10) {
-            $weights = [3, 4, 5, 6, 7, 8, 9, 10];
-            $checkval = $this->sumWeights($weights, $vatNumber);
-
-            $checkval = ($checkval % 11) == 10 ? 0 : ($checkval % 11);
-        } else {
-            $checkval = $checkval % 11;
-        }
-
-        return $checkval == (int) $vatNumber[8];
+        return $this->checkValue($vatNumber, $weights, parent::DEFAULT_MODULO, 8);
     }
 
     /**
@@ -83,17 +73,19 @@ class ValidatorBG extends ValidatorAbstract
     private function validateNaturalPerson(string $vatNumber): bool
     {
         $weights = [2, 4, 8, 5, 10, 9, 7, 3, 6];
-        $checkval = $this->sumWeights($weights, $vatNumber);
+        return $this->checkValue($vatNumber, $weights, parent::DEFAULT_MODULO, parent::DEFAULT_VAT_POSITION);
+    }
 
-        if ($checkval % 11 == 10) {
-            $weights = [3, 4, 5, 6, 7, 8, 9, 10];
-            $checkval = $this->sumWeights($weights, $vatNumber);
-
-            $checkval = ($checkval % 11) == 10 ? 0 : ($checkval % 11);
-        } else {
-            $checkval = $checkval % 11;
-        }
-
-        return $checkval == (int) $vatNumber[9];
+    /**
+     * Validate VAT ID's for foreign natural persons
+     *
+     * @param string $vatNumber
+     * @return bool
+     * @see https://github.com/yolk/valvat/blob/master/lib/valvat/checksum/bg.rb
+     */
+    private function validateForeignNaturalPerson(string $vatNumber): bool
+    {
+        $weights = [21, 19, 17, 13, 11, 9, 7, 3, 1];
+        return $this->checkValue($vatNumber, $weights, 10, parent::DEFAULT_VAT_POSITION);
     }
 }
